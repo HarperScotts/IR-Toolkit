@@ -1,0 +1,19 @@
+version: 1
+
+metadata:
+  name: "test"
+  source: "development"
+
+iocs:
+  process_names:
+    - value: "explorer.exe"
+      description: "test process match"
+
+  paths:
+    - value: 'C:\Windows\explorer.exe'
+      description: "test path"
+
+  command_lines:
+    - value: "explorer.exe"
+      match: "contains"
+      description: "test command line"

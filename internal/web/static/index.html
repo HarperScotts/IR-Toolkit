@@ -1,0 +1,1097 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>IR-Toolkit</title>
+
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div>
+          <h1>IR-Toolkit</h1>
+
+          <div class="subtitle">Incident Response Investigation Workspace</div>
+        </div>
+
+        <div id="server-status" class="status status-loading">Connecting</div>
+      </header>
+
+      <nav id="investigation-navigation" class="investigation-navigation">
+        <div class="investigation-navigation-actions">
+          <button
+            id="investigation-back"
+            type="button"
+            class="secondary-button"
+            disabled
+          >
+            ← Back
+          </button>
+
+          <button
+            id="investigation-forward"
+            type="button"
+            class="secondary-button"
+            disabled
+          >
+            Forward →
+          </button>
+          <button
+            id="investigation-copy-link"
+            type="button"
+            class="secondary-button"
+          >
+            Copy Link
+          </button>
+        </div>
+
+        <div class="investigation-navigation-location">
+          <span class="label">LOCATION</span>
+
+          <span id="investigation-current-location"> Case Overview </span>
+        </div>
+      </nav>
+
+      <div
+        id="investigation-breadcrumb"
+        class="investigation-breadcrumb"
+        aria-label="Investigation path"
+      ></div>
+
+      <main>
+        <!-- Case -->
+
+        <section class="case-header">
+          <div>
+            <div class="label">CASE</div>
+
+            <div id="case-name" class="case-name">Loading...</div>
+          </div>
+
+          <div>
+            <div class="label">HOST</div>
+
+            <div id="hostname" class="case-host">-</div>
+          </div>
+        </section>
+
+        <!-- Coverage -->
+
+        <section>
+          <h2>Evidence Coverage</h2>
+
+          <div class="coverage-grid">
+            <article class="metric">
+              <div class="metric-label">Collection Mode</div>
+
+              <div id="collection-mode" class="metric-value">-</div>
+            </article>
+
+            <article class="metric">
+              <div class="metric-label">Historical Coverage</div>
+
+              <div id="historical-coverage" class="metric-value">-</div>
+            </article>
+
+            <article class="metric">
+              <div class="metric-label">Snapshot Coverage</div>
+
+              <div id="snapshot-coverage" class="metric-value">-</div>
+            </article>
+          </div>
+        </section>
+
+        <!-- Capabilities -->
+
+        <section>
+          <h2>Evidence Capabilities</h2>
+
+          <div id="capabilities" class="capability-grid"></div>
+        </section>
+
+        <!-- Security Providers -->
+
+        <section>
+          <h2>Security Providers</h2>
+
+          <div id="security-providers" class="provider-list"></div>
+        </section>
+
+        <!-- Summary -->
+
+        <section>
+          <h2>Analysis Summary</h2>
+
+          <div id="analysis-summary" class="summary-grid"></div>
+        </section>
+
+        <!-- Global Search -->
+        <section class="global-search-section">
+          <div class="section-heading">
+            <div>
+              <h2>Investigation Search</h2>
+
+              <div class="section-subtitle">
+                Search across collected and analyzed evidence.
+              </div>
+            </div>
+          </div>
+
+          <div class="global-search-controls">
+            <input
+              id="global-search-input"
+              type="search"
+              placeholder="PID, LogonID, IP, process, ScriptBlock, path, hash..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+
+            <select id="global-search-type">
+              <option value="">All Evidence</option>
+
+              <option value="process">Process</option>
+
+              <option value="login">Login</option>
+
+              <option value="network">Network</option>
+
+              <option value="historical_process">Historical Process</option>
+
+              <option value="powershell">PowerShell</option>
+
+              <option value="windows_event">Windows Event</option>
+
+              <option value="ioc">IOC</option>
+
+              <option value="file">File</option>
+
+              <option value="persistence">Persistence</option>
+
+              <option value="timeline">Timeline</option>
+
+              <option value="correlation_node">Correlation Node</option>
+
+              <option value="correlation_edge">Correlation Edge</option>
+            </select>
+
+            <button
+              id="global-search-button"
+              type="button"
+              class="primary-button"
+            >
+              Search
+            </button>
+
+            <button
+              id="global-search-clear"
+              type="button"
+              class="secondary-button"
+            >
+              Clear
+            </button>
+          </div>
+
+          <div id="global-search-status" class="section-subtitle"></div>
+
+          <div
+            id="global-search-type-stats"
+            class="global-search-type-stats"
+          ></div>
+
+          <div id="global-search-results" class="global-search-results"></div>
+        </section>
+
+        <!-- Evidence Detail 面板 -->
+        <section id="evidence-detail-section" class="hidden">
+          <div class="section-heading">
+            <div>
+              <h2>Evidence Detail</h2>
+
+              <div id="evidence-detail-subtitle" class="section-subtitle"></div>
+            </div>
+
+            <button
+              id="evidence-detail-close"
+              type="button"
+              class="secondary-button"
+            >
+              Close
+            </button>
+          </div>
+
+          <div id="evidence-detail" class="event-detail"></div>
+        </section>
+
+        <!-- Navigation -->
+
+        <section>
+          <h2>Investigation</h2>
+
+          <div class="investigation-grid">
+            <button
+              type="button"
+              class="investigation-card"
+              data-view="timeline"
+            >
+              <strong> Timeline </strong>
+
+              <span> Explore activity chronologically </span>
+            </button>
+
+            <button
+              type="button"
+              class="investigation-card"
+              data-view="processes"
+            >
+              <strong> Processes </strong>
+
+              <span> Investigate process relationships </span>
+            </button>
+
+            <button
+              type="button"
+              class="investigation-card"
+              data-view="correlation"
+            >
+              <strong> Correlation </strong>
+
+              <span> Explore historical evidence relationships </span>
+            </button>
+
+            <button type="button" class="investigation-card" data-view="logins">
+              <strong> Logins </strong>
+
+              <span> Investigate login sessions and related processes </span>
+            </button>
+
+            <button
+              type="button"
+              class="investigation-card"
+              data-view="network"
+            >
+              <strong>Network</strong>
+
+              <span>
+                Investigate connections, listeners and process context
+              </span>
+            </button>
+
+            <button type="button" class="investigation-card" data-view="files">
+              <strong>Files</strong>
+
+              <span>
+                Investigate collected file evidence and analysis findings
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="investigation-card"
+              data-view="persistence"
+            >
+              <strong>Persistence</strong>
+
+              <span> Investigate services, run keys and scheduled tasks </span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Timeline preview -->
+
+        <section id="timeline-section" class="hidden">
+          <div class="section-heading">
+            <div>
+              <h2>Unified Timeline</h2>
+
+              <div id="timeline-result-count" class="section-subtitle">-</div>
+            </div>
+
+            <button id="close-timeline" type="button" class="secondary-button">
+              Close
+            </button>
+          </div>
+
+          <!-- Search -->
+
+          <div class="timeline-toolbar">
+            <div class="search-row">
+              <label class="field field-wide">
+                <span> Search </span>
+
+                <input
+                  id="timeline-search"
+                  type="search"
+                  placeholder="IP, process, command, event..."
+                />
+              </label>
+
+              <label class="field">
+                <span> User </span>
+
+                <input id="timeline-user" type="text" />
+              </label>
+
+              <label class="field">
+                <span> PID </span>
+
+                <input id="timeline-pid" type="number" min="0" />
+              </label>
+
+              <label class="field">
+                <span> IP </span>
+
+                <input id="timeline-ip" type="text" />
+              </label>
+            </div>
+
+            <div class="search-row">
+              <label class="field">
+                <span> From </span>
+
+                <input id="timeline-from" type="datetime-local" />
+              </label>
+
+              <label class="field">
+                <span> To </span>
+
+                <input id="timeline-to" type="datetime-local" />
+              </label>
+
+              <label class="field">
+                <span> Order </span>
+
+                <select id="timeline-order">
+                  <option value="asc">Oldest first</option>
+
+                  <option value="desc">Newest first</option>
+                </select>
+              </label>
+
+              <div class="toolbar-actions">
+                <button
+                  id="timeline-apply"
+                  type="button"
+                  class="primary-button"
+                >
+                  Apply
+                </button>
+
+                <button
+                  id="timeline-reset"
+                  type="button"
+                  class="secondary-button"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            <div id="timeline-categories" class="category-tabs"></div>
+          </div>
+
+          <!-- Workspace -->
+
+          <div class="timeline-workspace">
+            <div>
+              <div id="timeline-list" class="timeline-list"></div>
+
+              <div class="pagination">
+                <button
+                  id="timeline-prev"
+                  type="button"
+                  class="secondary-button"
+                >
+                  Previous
+                </button>
+
+                <span id="timeline-page-info" class="pagination-info"> - </span>
+
+                <button
+                  id="timeline-next"
+                  type="button"
+                  class="secondary-button"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <aside id="timeline-detail" class="event-detail">
+              <div class="event-detail-empty">
+                Select an event to inspect the complete evidence.
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- Login Workspace -->
+        <section id="login-section" class="hidden">
+          <div class="section-heading">
+            <div>
+              <h2>Login Investigation</h2>
+
+              <div id="login-result-count" class="section-subtitle">-</div>
+            </div>
+
+            <button id="close-logins" type="button" class="secondary-button">
+              Close
+            </button>
+          </div>
+
+          <div class="login-toolbar">
+            <label class="field field-wide">
+              <span> Search </span>
+
+              <input
+                id="login-search"
+                type="search"
+                placeholder="LogonID, user, IP, workstation..."
+              />
+            </label>
+
+            <label class="field">
+              <span> User </span>
+
+              <input id="login-user" type="text" />
+            </label>
+
+            <label class="field">
+              <span> IP </span>
+
+              <input id="login-ip" type="text" />
+            </label>
+
+            <label class="field">
+              <span> Logon Type </span>
+
+              <input
+                id="login-type"
+                type="text"
+                placeholder="3, 10, Network, RemoteInteractive..."
+              />
+            </label>
+
+            <div class="toolbar-actions">
+              <button id="login-apply" type="button" class="primary-button">
+                Apply
+              </button>
+
+              <button id="login-reset" type="button" class="secondary-button">
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <div class="login-workspace">
+            <div>
+              <div id="login-list" class="login-list"></div>
+
+              <div class="pagination">
+                <button id="login-prev" type="button" class="secondary-button">
+                  Previous
+                </button>
+
+                <span id="login-page-info" class="pagination-info"> - </span>
+
+                <button id="login-next" type="button" class="secondary-button">
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <aside id="login-detail" class="event-detail">
+              <div class="event-detail-empty">
+                Select a login session to investigate.
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- Network Workspace -->
+        <section id="network-section" class="hidden">
+          <div class="section-heading">
+            <div>
+              <h2>Network Investigation</h2>
+
+              <div id="network-result-count" class="section-subtitle">-</div>
+            </div>
+
+            <button id="close-network" type="button" class="secondary-button">
+              Close
+            </button>
+          </div>
+
+          <div class="network-toolbar">
+            <label class="field field-wide">
+              <span>Search</span>
+
+              <input
+                id="network-search"
+                type="search"
+                placeholder="PID, process, IP, port, protocol..."
+              />
+            </label>
+
+            <label class="field">
+              <span>PID</span>
+
+              <input id="network-pid" type="number" min="0" />
+            </label>
+
+            <label class="field">
+              <span>IP</span>
+
+              <input id="network-ip" type="text" />
+            </label>
+
+            <label class="field">
+              <span>State</span>
+
+              <input
+                id="network-state"
+                type="text"
+                placeholder="ESTABLISHED, LISTEN..."
+              />
+            </label>
+
+            <label class="field">
+              <span>External</span>
+
+              <select id="network-external">
+                <option value="">All</option>
+                <option value="true">External only</option>
+                <option value="false">Non-external</option>
+              </select>
+            </label>
+
+            <div class="toolbar-actions">
+              <button id="network-apply" type="button" class="primary-button">
+                Apply
+              </button>
+
+              <button id="network-reset" type="button" class="secondary-button">
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <div class="network-workspace">
+            <div>
+              <div id="network-list" class="network-list"></div>
+
+              <div class="pagination">
+                <button
+                  id="network-prev"
+                  type="button"
+                  class="secondary-button"
+                >
+                  Previous
+                </button>
+
+                <span id="network-page-info" class="pagination-info"> - </span>
+
+                <button
+                  id="network-next"
+                  type="button"
+                  class="secondary-button"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <aside id="network-detail" class="event-detail">
+              <div class="event-detail-empty">
+                Select a network connection to investigate.
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- File Workspace -->
+        <section id="file-section" class="hidden">
+          <div class="section-heading">
+            <div>
+              <h2>File Investigation</h2>
+
+              <div id="file-result-count" class="section-subtitle">-</div>
+            </div>
+
+            <button id="close-files" type="button" class="secondary-button">
+              Close
+            </button>
+          </div>
+
+          <div class="file-toolbar">
+            <label class="field field-wide">
+              <span>Search</span>
+
+              <input
+                id="file-search"
+                type="search"
+                placeholder="Path, name, SHA256, owner, ADS..."
+              />
+            </label>
+
+            <label class="field">
+              <span>Owner</span>
+
+              <input id="file-owner" type="text" />
+            </label>
+
+            <label class="field">
+              <span>Extension</span>
+
+              <input id="file-extension" type="text" placeholder=".exe" />
+            </label>
+
+            <label class="field">
+              <span>Executable</span>
+
+              <select id="file-executable">
+                <option value="">All</option>
+                <option value="true">Executable only</option>
+                <option value="false">Non-executable</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Finding</span>
+
+              <select id="file-finding">
+                <option value="">All</option>
+                <option value="true">Finding only</option>
+                <option value="false">Without finding</option>
+              </select>
+            </label>
+
+            <div class="toolbar-actions">
+              <button id="file-apply" type="button" class="primary-button">
+                Apply
+              </button>
+
+              <button id="file-reset" type="button" class="secondary-button">
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <div class="file-workspace">
+            <div>
+              <div id="file-list" class="file-list"></div>
+
+              <div class="pagination">
+                <button id="file-prev" type="button" class="secondary-button">
+                  Previous
+                </button>
+
+                <span id="file-page-info" class="pagination-info"> - </span>
+
+                <button id="file-next" type="button" class="secondary-button">
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <aside id="file-detail" class="event-detail">
+              <div class="event-detail-empty">
+                Select a file to investigate.
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- Persistence Workspace -->
+        <section id="persistence-section" class="hidden">
+          <div class="section-heading">
+            <div>
+              <h2>Persistence Investigation</h2>
+
+              <div id="persistence-result-count" class="section-subtitle">
+                -
+              </div>
+            </div>
+
+            <button
+              id="close-persistence"
+              type="button"
+              class="secondary-button"
+            >
+              Close
+            </button>
+          </div>
+
+          <div class="persistence-toolbar">
+            <label class="field field-wide">
+              <span>Search</span>
+
+              <input
+                id="persistence-search"
+                type="search"
+                placeholder="Service, task, run key, command..."
+              />
+            </label>
+
+            <label class="field">
+              <span>Type</span>
+
+              <select id="persistence-type">
+                <option value="">All</option>
+                <option value="service">Service</option>
+                <option value="run_key">Run Key</option>
+                <option value="scheduled_task">Scheduled Task</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>User</span>
+
+              <input id="persistence-user" type="text" />
+            </label>
+
+            <label class="field">
+              <span>Finding</span>
+
+              <select id="persistence-finding">
+                <option value="">All</option>
+                <option value="true">Finding only</option>
+                <option value="false">Without finding</option>
+              </select>
+            </label>
+
+            <div class="toolbar-actions">
+              <button
+                id="persistence-apply"
+                type="button"
+                class="primary-button"
+              >
+                Apply
+              </button>
+
+              <button
+                id="persistence-reset"
+                type="button"
+                class="secondary-button"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <div class="persistence-workspace">
+            <div>
+              <div id="persistence-list" class="persistence-list"></div>
+
+              <div class="pagination">
+                <button
+                  id="persistence-prev"
+                  type="button"
+                  class="secondary-button"
+                >
+                  Previous
+                </button>
+
+                <span id="persistence-page-info" class="pagination-info">
+                  -
+                </span>
+
+                <button
+                  id="persistence-next"
+                  type="button"
+                  class="secondary-button"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <aside id="persistence-detail" class="event-detail">
+              <div class="event-detail-empty">
+                Select persistence evidence to investigate.
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- // Process section -->
+        <section id="process-section" class="hidden">
+          <div class="section-heading">
+            <div>
+              <h2>Process Investigation</h2>
+
+              <div id="process-result-count" class="section-subtitle">-</div>
+            </div>
+
+            <button id="close-processes" type="button" class="secondary-button">
+              Close
+            </button>
+          </div>
+
+          <div class="process-toolbar">
+            <label class="field field-wide">
+              <span> Search </span>
+
+              <input
+                id="process-search"
+                type="search"
+                placeholder="PID, name, path, command line, user..."
+              />
+            </label>
+
+            <label class="field">
+              <span> User </span>
+
+              <input id="process-user" type="text" />
+            </label>
+
+            <div class="toolbar-actions">
+              <button id="process-apply" type="button" class="primary-button">
+                Apply
+              </button>
+
+              <button id="process-reset" type="button" class="secondary-button">
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <div class="process-workspace">
+            <div>
+              <div id="process-list" class="process-list"></div>
+
+              <div class="pagination">
+                <button
+                  id="process-prev"
+                  type="button"
+                  class="secondary-button"
+                >
+                  Previous
+                </button>
+
+                <span id="process-page-info" class="pagination-info"> - </span>
+
+                <button
+                  id="process-next"
+                  type="button"
+                  class="secondary-button"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <aside id="process-detail" class="process-detail">
+              <div class="event-detail-empty">
+                Select a process to investigate.
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- Correlation section -->
+        <section id="correlation-section" class="hidden">
+          <div class="section-heading">
+            <div>
+              <h2>Historical Correlation</h2>
+
+              <div id="correlation-subtitle" class="section-subtitle">-</div>
+            </div>
+
+            <button
+              id="close-correlation"
+              type="button"
+              class="secondary-button"
+            >
+              Close
+            </button>
+          </div>
+
+          <div id="correlation-statistics" class="correlation-statistics"></div>
+
+          <div class="correlation-workspace">
+            <aside>
+              <div class="correlation-navigation">
+                <button
+                  id="correlation-tab-chains"
+                  type="button"
+                  class="correlation-nav-button selected"
+                >
+                  Historical Chains
+                </button>
+
+                <button
+                  id="correlation-tab-relationships"
+                  type="button"
+                  class="correlation-nav-button"
+                >
+                  Relationships
+                </button>
+              </div>
+
+              <div
+                id="correlation-chain-list"
+                class="correlation-chain-list"
+              ></div>
+            </aside>
+
+            <div>
+              <div class="correlation-visualization">
+                <div class="correlation-toolbar">
+                  <!-- 搜索 -->
+                  <div
+                    id="correlation-filter-bar"
+                    class="correlation-filter-bar"
+                  >
+                    <div class="correlation-filter-group">
+                      <label
+                        for="correlation-search"
+                        class="correlation-filter-label"
+                      >
+                        Search
+                      </label>
+
+                      <input
+                        id="correlation-search"
+                        type="search"
+                        class="correlation-search-input"
+                        placeholder="PID, LogonID, ScriptBlock, path, evidence ID..."
+                        autocomplete="off"
+                        spellcheck="false"
+                      />
+                    </div>
+
+                    <div class="correlation-filter-group">
+                      <label
+                        for="correlation-confidence"
+                        class="correlation-filter-label"
+                      >
+                        Confidence
+                      </label>
+
+                      <select
+                        id="correlation-confidence"
+                        class="correlation-filter-select"
+                      >
+                        <option value="all">All</option>
+
+                        <option value="high">High</option>
+
+                        <option value="medium">Medium</option>
+
+                        <option value="low">Low</option>
+                      </select>
+                    </div>
+
+                    <div
+                      class="correlation-filter-group correlation-node-type-group"
+                    >
+                      <div class="correlation-filter-label">Node Types</div>
+
+                      <div
+                        id="correlation-node-type-filters"
+                        class="correlation-node-type-filters"
+                      ></div>
+                    </div>
+
+                    <button
+                      id="correlation-clear-filters"
+                      type="button"
+                      class="correlation-toolbar-button"
+                    >
+                      Clear
+                    </button>
+                  </div>
+
+                  <div
+                    id="correlation-filter-status"
+                    class="correlation-filter-status"
+                  ></div>
+
+                  <!-- Graph -->
+                  <div class="correlation-view-switch">
+                    <button
+                      id="correlation-view-graph"
+                      type="button"
+                      class="correlation-toolbar-button selected"
+                    >
+                      Graph
+                    </button>
+
+                    <button
+                      id="correlation-view-list"
+                      type="button"
+                      class="correlation-toolbar-button"
+                    >
+                      List
+                    </button>
+                  </div>
+
+                  <div class="correlation-graph-actions">
+                    <button
+                      id="correlation-graph-fit"
+                      type="button"
+                      class="correlation-toolbar-button"
+                    >
+                      Fit
+                    </button>
+
+                    <button
+                      id="correlation-graph-zoom-in"
+                      type="button"
+                      class="correlation-toolbar-button"
+                      aria-label="Zoom in"
+                    >
+                      +
+                    </button>
+
+                    <button
+                      id="correlation-graph-zoom-out"
+                      type="button"
+                      class="correlation-toolbar-button"
+                      aria-label="Zoom out"
+                    >
+                      −
+                    </button>
+
+                    <button
+                      id="correlation-graph-reset"
+                      type="button"
+                      class="correlation-toolbar-button"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  id="correlation-graph-canvas"
+                  class="correlation-graph-canvas"
+                ></div>
+
+                <div
+                  id="correlation-graph"
+                  class="correlation-graph correlation-list-view hidden"
+                ></div>
+              </div>
+            </div>
+
+            <aside id="correlation-detail" class="correlation-detail">
+              <div class="event-detail-empty">
+                Select a node or relationship.
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/vendor/cytoscape.min.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>
