@@ -12,6 +12,7 @@ type CaseStore interface {
 	ProcessStore
 
 	LoginStore
+	LinuxLoginStore
 
 	NetworkStore
 
@@ -32,6 +33,13 @@ type CaseStore interface {
 	QueryStore
 
 	SearchStore
+}
+
+type LinuxLoginStore interface {
+	QueryLinuxLogin1(options LinuxLogin1QueryOptions) (QueryResult[model.LinuxLogin1Observation], error)
+	LinuxLogin1ByID(id string) (model.LinuxLogin1Observation, bool, error)
+	QueryLinuxLogins(options LinuxLoginQueryOptions) (QueryResult[model.LinuxLoginRecord], error)
+	LinuxLoginRecordByID(id string) (model.LinuxLoginRecord, bool, error)
 }
 
 type FileStore interface {

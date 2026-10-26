@@ -121,7 +121,11 @@ func (a *ProcessNetworkAnalyzer) Analyze(
 		index, exists :=
 			processMap[connection.PID]
 
-		if !exists {
+		// A collector-provided instance key must match exactly; PID alone may
+		// have been reused between process and network snapshots. Legacy/Windows
+		// snapshots where neither side has a key retain their existing behavior.
+		if !exists || connection.PID == 0 || (connection.ProcessInstanceID != "" || processes[index].ProcessInstanceID != "") &&
+			connection.ProcessInstanceID != processes[index].ProcessInstanceID {
 
 			result.OrphanConnections =
 				append(

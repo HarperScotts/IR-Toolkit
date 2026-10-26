@@ -11,6 +11,9 @@ var ErrNilRepository = errors.New("central repository is required")
 
 // IngestRequest contains one complete, committed Store snapshot. Producing the
 // snapshot and transporting it from an Agent are separate boundaries.
+// The caller retains storage ownership but must stop all mutation before
+// ingest and keep the snapshot available for concurrent reads for the lifetime
+// of its published view. Ingest does not materialize or freeze a live Store.
 type IngestRequest struct {
 	View     View
 	Snapshot store.CaseStore

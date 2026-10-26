@@ -60,11 +60,16 @@ func readProcess(pid uint32) (model.Process, error) {
 		"/proc",
 		pidString,
 	)
+	// Pin this proc directory while reading. A recycled pathname must not
+	// silently switch the observation to a different process mid-collection.
+	processRoot, err := os.OpenRoot(base)
+	if err != nil {
+		return model.Process{}, err
+	}
+	defer processRoot.Close()
 
 	// /proc/<pid>/stat
-	statData, err := os.ReadFile(
-		filepath.Join(base, "stat"),
-	)
+	statData, err := readProcBounded(processRoot, "stat", 64<<10)
 	if err != nil {
 		return model.Process{}, err
 	}
@@ -73,13 +78,15 @@ func readProcess(pid uint32) (model.Process, error) {
 	if err != nil {
 		return model.Process{}, err
 	}
+	instance, err := procInstance(statData, pid)
+	if err != nil {
+		return model.Process{}, err
+	}
 
 	// /proc/<pid>/cmdline
 	commandLine := ""
 
-	if data, err := os.ReadFile(
-		filepath.Join(base, "cmdline"),
-	); err == nil {
+	if data, err := readProcBounded(processRoot, "cmdline", 1<<20); err == nil {
 		commandLine = strings.TrimSpace(
 			strings.ReplaceAll(
 				string(data),
@@ -92,28 +99,33 @@ func readProcess(pid uint32) (model.Process, error) {
 	// /proc/<pid>/exe
 	path := ""
 
-	if target, err := os.Readlink(
-		filepath.Join(base, "exe"),
-	); err == nil {
+	if target, err := processRoot.Readlink("exe"); err == nil {
 		path = target
 	}
 
 	// /proc/<pid>/status
 	user := ""
 
-	if data, err := os.ReadFile(
-		filepath.Join(base, "status"),
-	); err == nil {
+	if data, err := readProcBounded(processRoot, "status", 64<<10); err == nil {
 		user = uidFromStatus(string(data))
 	}
 
+	endStat, err := readProcBounded(processRoot, "stat", 64<<10)
+	if err != nil {
+		return model.Process{}, err
+	}
+	endInstance, err := procInstance(endStat, pid)
+	if err != nil || instance != endInstance {
+		return model.Process{}, fmt.Errorf("process identity changed during collection")
+	}
 	return model.Process{
-		PID:         pid,
-		PPID:        ppid,
-		Name:        name,
-		Path:        path,
-		CommandLine: commandLine,
-		User:        user,
+		PID:               pid,
+		ProcessInstanceID: instance,
+		PPID:              ppid,
+		Name:              name,
+		Path:              path,
+		CommandLine:       commandLine,
+		User:              user,
 	}, nil
 }
 

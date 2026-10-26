@@ -19,10 +19,9 @@ func (c *CapabilityCollector) Collect(
 	return model.AuditCapabilitySnapshot{
 		CollectionMode: "snapshot_only",
 
-		SnapshotCoverage: 100,
-
 		Warnings: []string{
 			"Linux capability detection is not implemented yet",
+			"Linux coverage percentages are not quantified; zero is not proof of no evidence and 100 percent coverage is not claimed",
 		},
 	}, nil
 }

@@ -119,6 +119,9 @@ func (s *CaseStore) ensurePersistence() error {
 			}
 
 			s.buildPersistenceItems()
+			if len(s.persistenceAnalysis.LinuxSystemdMerges) > 0 {
+				s.linuxPersistenceInputDigest = model.LinuxPersistenceInputDigest(s.persistenceSnapshot)
+			}
 		},
 	)
 
@@ -207,6 +210,10 @@ func (s *CaseStore) buildPersistenceItems() {
 
 	s.persistenceItems =
 		items
+	for _, artifact := range snapshot.LinuxArtifacts {
+		s.persistenceItems = append(s.persistenceItems, linuxPersistenceItem(artifact))
+	}
+	items = s.persistenceItems
 
 	for index, item := range items {
 
@@ -296,11 +303,43 @@ func (s *CaseStore) PersistenceItemByID(
 			nil
 	}
 
-	return s.persistenceQueryItemFromLocal(
-			s.persistenceItems[index],
-		),
-		true,
-		nil
+	item := s.persistenceQueryItemFromLocal(s.persistenceItems[index])
+	// Source-local analysis is bound by exact case-sensitive path, kind and
+	// source hash. Never recompute interpretation in Store or attach stale data.
+	for _, artifact := range s.persistenceSnapshot.LinuxArtifacts {
+		if artifact.Path != item.Name || "linux_"+artifact.Kind != item.Type {
+			continue
+		}
+		for _, config := range s.persistenceAnalysis.LinuxConfigs {
+			if config.Path == artifact.Path && config.Kind == artifact.Kind && config.SHA256 == artifact.SHA256 {
+				if item.LinuxConfig != nil {
+					item.LinuxConfig = nil
+					return item, true, nil
+				}
+				copyConfig := config
+				item.LinuxConfig = &copyConfig
+			}
+		}
+	}
+	if item.Type == "linux_systemd" {
+		counts := map[string]int{}
+		for _, merge := range s.persistenceAnalysis.LinuxSystemdMerges {
+			counts[merge.Scope+"\x00"+merge.Unit]++
+		}
+		for _, merge := range s.persistenceAnalysis.LinuxSystemdMerges {
+			knownProfile := merge.Profile == "observed-system-service-v1" || merge.Profile == "observed-system-service-v2"
+			if !knownProfile || merge.Scope != "system" || merge.Activation != "unknown" || merge.InputDigest != s.linuxPersistenceInputDigest || counts[merge.Scope+"\x00"+merge.Unit] != 1 {
+				continue
+			}
+			for _, source := range merge.Sources {
+				if source.Path == item.Name {
+					item.LinuxSystemdMerges = append(item.LinuxSystemdMerges, merge)
+					break
+				}
+			}
+		}
+	}
+	return item, true, nil
 }
 
 func (s *CaseStore) PersistenceFindings() (

@@ -395,6 +395,13 @@ func (s *CaseStore) SearchInvestigation(
 			nil
 	}
 
+	// Validate only selected domains before producing any results. Loaders cache
+	// both success and failure via sync.Once, so the private search helpers reuse
+	// this same snapshot. A broken domain must not masquerade as no matches.
+	if err := s.ensureSearchDomains(options.Types); err != nil {
+		return result, err
+	}
+
 	appendItems :=
 		func(
 			items []store.InvestigationSearchItem,

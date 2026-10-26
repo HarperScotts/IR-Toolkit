@@ -88,3 +88,24 @@ type MultiHostInvestigationStore interface {
 		error,
 	)
 }
+
+// CaseViewCatalog exposes the available committed views for UI selection.
+type CaseViewCatalog interface {
+	Views() []CaseView
+}
+
+var ErrUnsupportedEvidenceType = errors.New("unsupported evidence type")
+var ErrInvalidEvidenceID = errors.New("invalid evidence ID")
+
+// ScopedEvidenceDetail retains the precise source view and original evidence ID.
+// Evidence is a domain model or Store-neutral record returned by exact lookup.
+type ScopedEvidenceDetail struct {
+	View     CaseView
+	Type     string
+	ID       string
+	Evidence any
+}
+
+type ScopedEvidenceStore interface {
+	EvidenceDetail(view CaseView, evidenceType, id string) (ScopedEvidenceDetail, bool, error)
+}

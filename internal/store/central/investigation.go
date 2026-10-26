@@ -35,6 +35,29 @@ type Investigator struct {
 	repository *Repository
 }
 
+func (i *Investigator) Views() []store.CaseView {
+	views := make([]store.CaseView, 0)
+	if i == nil || i.repository == nil {
+		return views
+	}
+	i.repository.mu.RLock()
+	defer i.repository.mu.RUnlock()
+	for view := range i.repository.stores {
+		views = append(views, view)
+	}
+	sort.Slice(views, func(a, b int) bool {
+		left, right := views[a], views[b]
+		if left.CaseID != right.CaseID {
+			return left.CaseID < right.CaseID
+		}
+		if left.HostID != right.HostID {
+			return left.HostID < right.HostID
+		}
+		return left.Version < right.Version
+	})
+	return views
+}
+
 func NewInvestigator(repository *Repository) (*Investigator, error) {
 	if repository == nil {
 		return nil, ErrNilRepository

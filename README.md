@@ -1,8 +1,17 @@
 # IR Toolkit
 
+当前开发版本：`0.3.0`。更新内容与未完成验收见 [CHANGELOG](CHANGELOG.md)。
+
 IR Toolkit 是一个面向攻防与事件响应（Incident Response）的本地命令行/ Web 工具集，目标是帮助调查人员在主机上收集证据、分析恶意行为、识别 IOC，并在本地浏览调查结果。
 
 该项目目前以 Go 语言实现，围绕“收集证据 → 分析关联 → 识别 IOC → 浏览结果”这一链路组织。
+
+目前仍以 Windows 为主。Linux 已接通主机/进程基础快照、TCP/UDP 网络采集与基础分析，
+以及 systemd/cron 候选采集、文件级解析、有限 systemd 观测合并和列表查询。
+Linux 登录已支持有限 SSH 认证日志采集/解析、独立调查页/API 及查询时间窗口（未知时间保留上下文）；真实有效配置确认、完整登录会话、
+文件调查和原生 audit/journal 历史仍未实现。login1 已接入独立原始观察、可空属性分析及调查页；不等于已确认活动会话，仍需真实 logind 验收。
+能力范围、限制和后续顺序见 [Linux 支持说明](docs/linux-support.md)。
+Linux login1 的只读兼容性诊断可用 `ir diagnose-login1`；[实机验收流程](docs/linux-login1-acceptance.md)区分自动观察与仍待执行的真实 logind 验收。
 
 ## 项目概览
 
@@ -143,6 +152,74 @@ http://127.0.0.1:8080
 # 4. 打开 Web 界面
 ./ir web case-demo
 ```
+
+## 本地 Central 快照仓库
+
+完整、已分析的 case 可复制到独立仓库，再从仓库启动只读调查：
+
+```bash
+./ir central-import --repository central-data --case-id investigation-1 case-host-a case-host-b
+./ir central-web --repository central-data --case-id investigation-1
+```
+
+导入期间不要重写源 case。仓库不能放在源 case 内；同一 case/host/version 不允许覆盖。
+服务重启只需要仓库，不再依赖原目录。原有按目录启动的 `central-web` 保持不变。
+仓库包含敏感证据，使用可信本地磁盘和受限访问，勿提交到 Git 或公开共享。
+格式、完整性检查和恢复限制见 [Central 契约](docs/central-store-contract.md#16-文件快照持久化与重启恢复)。
+异常中断后不会自动接管锁；请先核实 writer 已停止及批次提交状态，再按
+[显式恢复流程](docs/central-store-contract.md#17-异常中断与锁恢复)处理，勿删除仓库或手工发布暂存目录。
+
+## 离线 case 包
+
+停止对源 case 的采集、分析及其它写入后，导出到源目录之外的新文件：
+
+```bash
+./ir case-pack case-host-a --output case-host-a.ircase.tar
+./ir case-verify case-host-a.ircase.tar
+```
+
+输出父目录必须已存在且可信；已有文件或链接不覆盖。导出保持原始证据字节，
+复用现有 loader 检查全部领域，正常失败时仅清理本次新建的未完成输出。
+输出不是原子发布：运行中可能观察到部分文件；异常终止可能遗留它，应先停止 writer
+并核实状态，不自动覆盖或恢复。只有命令成功才表示导出完成。
+
+命令返回 JSON 回执。`case-verify` 只读核对容器、完整文件清单、哈希和源身份，
+`domains_loaded` 为 false，不能证明完整领域可加载或来源真实；两命令的 `committed`
+均为 false，不解包、不写 Central 仓库。
+
+导入时明确选择接收调查 ID、可信仓库和已存在且权限/ACL 受限的临时父目录：
+
+```bash
+./ir central-import-package --repository central-data --case-id investigation-1 --temp-parent ir-private-temp case-host-a.ircase.tar
+./ir central-web --repository central-data --case-id investigation-1
+```
+
+一条命令只导入一个包；受限解包与完整领域加载通过后才提交，保持包内展示名称与原始证据字节。
+同一 case/host/version 拒绝重复，不覆盖也不自动视为重试成功。正常结束仅清理本次临时树，
+不删除输入包。不要用通用 tar 解包后当作可信目录导入。
+提交回执为 `status: committed`、`committed: true`；提交阶段报错可能标记
+`commit-outcome-unknown`、`committed: null`，必须核实仓库状态再重试，勿自行解锁或删除批次。
+预算、格式、异常恢复和 Windows 待验收边界见 [离线包契约](docs/offline-package-contract.md)。
+
+在授权 Windows 测试机上，可运行 [离线包验收脚本](scripts/windows-package-acceptance.ps1)。
+需要 PowerShell 7、Go 和已构建的本机 `ir.exe`；指定可信私有工作父目录，
+脚本只生成独立合成样例并保留日志，不使用真实 case、不自动清理或恢复仓库锁。
+命令、覆盖范围和待验收项见 [运行验收记录](docs/runtime-acceptance.md#windows-离线包合成验收工具)。
+
+## 开发验证
+
+需要 Go（版本见 `go.mod`）、支持 `node:test` 的 Node.js 和 ripgrep。运行统一检查：
+
+```bash
+sh scripts/check.sh
+```
+
+也可使用 `npm run check`；单独运行前端交互测试使用 `npm test`，测试不需要安装额外的 npm 包。统一检查覆盖 Go 格式、Store/Web 依赖方向、canonical Network ID、vet、完整 Go 测试、离线包黑盒合成验收、前端语法及交互，以及 Windows/Linux amd64/arm64 交叉编译。交叉编译检查编译兼容性，不代替目标主机上的运行验证。
+
+受限环境下可显式设置一个可写的 Go 缓存，例如 `GOCACHE=/tmp/ir-toolkit-go-cache sh scripts/check.sh`。脚本不覆盖已有可执行文件，也不读取或修改 case 证据。
+离线包资源 profile 为单独的合成重型检查，不在默认检查中执行：
+`sh scripts/measure-package-resources.sh`。预算、采样口径和测量结果见
+[资源测量记录](docs/package-resource-profile.md)，不代表真实 case 或 Windows 的资源上限。
 
 ## 说明
 

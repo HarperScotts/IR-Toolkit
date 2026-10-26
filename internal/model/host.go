@@ -3,10 +3,10 @@ package model
 import "time"
 
 type HostInfo struct {
-	Hostname     string   `json:"hostname"`
-	OS           string   `json:"os"`
-	OSVersion    string   `json:"os_version,omitempty"`
-	Architecture string   `json:"architecture"`
+	Hostname     string `json:"hostname"`
+	OS           string `json:"os"`
+	OSVersion    string `json:"os_version,omitempty"`
+	Architecture string `json:"architecture"`
 
 	Kernel string `json:"kernel,omitempty"`
 

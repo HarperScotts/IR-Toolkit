@@ -2,13 +2,16 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"ir-toolkit/internal/analyzer"
+	"ir-toolkit/internal/model"
 )
 
 var analyzeCmd = &cobra.Command{
@@ -240,6 +243,11 @@ func runAnalyze(
 	// --------------------------------------------------
 	// Load evidence
 	// --------------------------------------------------
+	hostInfo, err := analyzer.LoadHost(hostFile)
+	if err != nil {
+		return err
+	}
+	isLinux := strings.EqualFold(hostInfo.OS, "linux")
 
 	processes, err :=
 		analyzer.LoadProcesses(
@@ -250,14 +258,15 @@ func runAnalyze(
 		return err
 	}
 
-	connections, err :=
-		analyzer.LoadNetworkConnections(
+	networkSnapshot, err :=
+		analyzer.LoadNetworkSnapshot(
 			networkFile,
 		)
 
 	if err != nil {
 		return err
 	}
+	connections := networkSnapshot.Connections
 
 	powerShellEvents, err :=
 		analyzer.LoadPowerShellEvents(
@@ -283,7 +292,12 @@ func runAnalyze(
 		)
 
 	if err != nil {
-		return err
+		// Linux has no Windows event collector. Only an absent file is optional;
+		// malformed or unreadable existing evidence must still fail analysis.
+		if !isLinux || !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		windowsEvents = model.WindowsEventSnapshot{}
 	}
 
 	iocResult, err :=
@@ -449,15 +463,6 @@ func runAnalyze(
 		return err
 	}
 
-	hostInfo, err :=
-		analyzer.LoadHost(
-			hostFile,
-		)
-
-	if err != nil {
-		return err
-	}
-
 	processEvents, err :=
 		analyzer.LoadProcessEvents(
 			processEventsFile,
@@ -546,6 +551,16 @@ func runAnalyze(
 			windowsEventResult,
 		)
 
+	// Persist and report the same collection-scoped timeline. Unknown-time
+	// context and inclusive bounds retain FilterTimelineByWindow semantics.
+	manifest, err := analyzer.LoadManifest(manifestFile)
+	if err != nil {
+		return err
+	}
+	timelineResult = analyzer.FilterTimelineByWindow(
+		timelineResult, manifest.CollectionSince, manifest.CollectionUntil,
+	)
+
 	if err :=
 		analyzer.WriteTimeline(
 			timelineJSONFile,
@@ -564,38 +579,34 @@ func runAnalyze(
 		return err
 	}
 
-	manifest, err :=
-		analyzer.LoadManifest(
-			manifestFile,
-		)
-
-	if err != nil {
-		return err
+	var collectionWarnings []string
+	collectionWarnings = append(collectionWarnings, loginResult.Warnings...)
+	collectionWarnings = append(collectionWarnings, persistenceResult.Warnings...)
+	for _, warning := range networkSnapshot.Warnings {
+		collectionWarnings = append(collectionWarnings, "Network collection: "+warning)
 	}
-
-	timelineResult =
-		analyzer.FilterTimelineByWindow(
-			timelineResult,
-			manifest.CollectionSince,
-			manifest.CollectionUntil,
-		)
-
-	// 放在所有 Analyzer 和 Timeline 都完成以后
-	caseReport :=
-		analyzer.BuildCaseReport(
-			caseDir,
-			hostInfo,
-			manifest,
-			capabilities,
-			fileResult,
-			persistenceResult,
-			powerShellResult,
-			windowsEventResult,
-			processHistoryResult,
-			historicalCorrelationResult,
-			timelineResult,
-			iocResult,
-		)
+	if isLinux {
+		collectionWarnings = append(collectionWarnings, "Windows event collection is not applicable to Linux; native Linux historical event collection is not implemented. Empty Windows-oriented analyses are not evidence of no Linux activity.")
+		for _, source := range []struct {
+			name     string
+			warnings []string
+		}{
+			{"files", fileSnapshot.Warnings},
+			{"persistence", persistenceSnapshot.Warnings},
+			{"login", loginSnapshot.Warnings},
+			{"process events", processEvents.Warnings},
+			{"PowerShell events", powerShellEvents.Warnings},
+		} {
+			for _, warning := range source.warnings {
+				collectionWarnings = append(collectionWarnings, "Linux "+source.name+" collection: "+warning)
+			}
+		}
+	}
+	// Include collection warnings before the executive summary counts gaps.
+	caseReport := analyzer.BuildCaseReport(caseDir, hostInfo, manifest, capabilities,
+		fileResult, persistenceResult, powerShellResult, windowsEventResult,
+		processHistoryResult, historicalCorrelationResult, timelineResult, iocResult,
+		collectionWarnings...)
 	if err :=
 		analyzer.WriteCaseReportJSON(
 			reportJSONOutput,
@@ -735,6 +746,15 @@ func runAnalyze(
 		"Scheduled Tasks        : %d\n",
 		persistenceResult.Statistics.ScheduledTaskCount,
 	)
+	if isLinux {
+		fmt.Printf("Linux Candidates       : %d\n", persistenceResult.Statistics.LinuxArtifactCount)
+		fmt.Printf("Linux Read Errors      : %d\n", persistenceResult.Statistics.LinuxReadErrorCount)
+		fmt.Printf("Linux Config Records   : %d\n", persistenceResult.Statistics.LinuxConfigCount)
+		fmt.Printf("Linux Directives       : %d\n", persistenceResult.Statistics.LinuxDirectiveCount)
+		fmt.Printf("Linux Cron Entries     : %d\n", persistenceResult.Statistics.LinuxCronEntryCount)
+		fmt.Printf("Systemd Merge Views    : %d\n", persistenceResult.Statistics.LinuxSystemdMergeCount)
+		fmt.Printf("Systemd Blocked Views  : %d\n", persistenceResult.Statistics.LinuxSystemdBlockedCount)
+	}
 
 	fmt.Printf(
 		"Persistence Findings   : %d\n",
@@ -796,6 +816,12 @@ func runAnalyze(
 		"Failed Logons          : %d\n",
 		loginResult.Statistics.FailedLoginCount,
 	)
+	if loginResult.LinuxStatistics != nil {
+		fmt.Printf("Linux SSH Log Claims   : %d\n", loginResult.LinuxStatistics.RecordCount)
+		fmt.Printf("  Reported Accepted    : %d\n", loginResult.LinuxStatistics.ReportedAccepted)
+		fmt.Printf("  Reported Failed      : %d\n", loginResult.LinuxStatistics.ReportedFailed)
+		fmt.Printf("  Unknown Time         : %d\n", loginResult.LinuxStatistics.UnknownTimeCount)
+	}
 
 	fmt.Printf(
 		"Login Findings         : %d\n",

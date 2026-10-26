@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"ir-toolkit/internal/buildinfo"
 	"ir-toolkit/internal/collection"
 	"ir-toolkit/internal/collector"
 	"ir-toolkit/internal/evidence"
@@ -274,7 +275,7 @@ func runCollect(
 			filepath.Clean(outputDir),
 		),
 
-		ToolVersion: "0.1.0",
+		ToolVersion: buildinfo.Version,
 
 		Platform: runtime.GOOS,
 

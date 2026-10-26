@@ -3,11 +3,35 @@ package model
 import "time"
 
 type PersistenceSnapshot struct {
-	Services       []ServiceInfo      `json:"services"`
-	RunKeys        []RegistryRunEntry `json:"run_keys"`
-	ScheduledTasks []ScheduledTask    `json:"scheduled_tasks"`
+	Services       []ServiceInfo              `json:"services"`
+	RunKeys        []RegistryRunEntry         `json:"run_keys"`
+	ScheduledTasks []ScheduledTask            `json:"scheduled_tasks"`
+	LinuxArtifacts []LinuxPersistenceArtifact `json:"linux_artifacts,omitempty"`
+	LinuxSources   []LinuxPersistenceSource   `json:"linux_sources,omitempty"`
 
 	Warnings []string `json:"warnings,omitempty"`
+}
+
+// Source observations, not effective configurations or execution events.
+type LinuxPersistenceArtifact struct {
+	Kind       string    `json:"kind"`
+	Path       string    `json:"path"`
+	Mode       string    `json:"mode,omitempty"`
+	UID        *uint32   `json:"uid,omitempty"`
+	GID        *uint32   `json:"gid,omitempty"`
+	Size       int64     `json:"size"`
+	ModifiedAt time.Time `json:"modified_at,omitempty"`
+	Content    []byte    `json:"content,omitempty"` // JSON base64 preserves exact bytes.
+	SHA256     string    `json:"sha256,omitempty"`
+	LinkTarget string    `json:"link_target,omitempty"`
+	ReadError  string    `json:"read_error,omitempty"`
+}
+
+type LinuxPersistenceSource struct {
+	Path   string `json:"path"`
+	Kind   string `json:"kind"`
+	Status string `json:"status"` // observed, missing, partial, error, not_scanned
+	Error  string `json:"error,omitempty"`
 }
 
 // --------------------------------------------------

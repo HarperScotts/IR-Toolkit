@@ -231,4 +231,3 @@ func investigationSearchResultFromStoreItem(
 		Metadata: metadata,
 	}
 }
-

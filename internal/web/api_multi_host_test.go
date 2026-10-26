@@ -14,12 +14,68 @@ import (
 )
 
 type multiHostStoreStub struct {
+	detailResult    store.ScopedEvidenceDetail
+	detailFound     bool
+	detailErr       error
+	detailView      store.CaseView
+	views           []store.CaseView
 	searchOptions   store.MultiHostSearchOptions
 	searchResult    store.MultiHostSearchResult
 	searchErr       error
 	timelineOptions store.MultiHostTimelineOptions
 	timelineResult  store.MultiHostTimelineResult
 	timelineErr     error
+}
+
+func (s *multiHostStoreStub) EvidenceDetail(view store.CaseView, evidenceType, id string) (store.ScopedEvidenceDetail, bool, error) {
+	s.detailView = view
+	return s.detailResult, s.detailFound, s.detailErr
+}
+
+func TestScopedEvidenceEndpoint(t *testing.T) {
+	view := store.CaseView{CaseID: "case", HostID: "beta", Version: "2"}
+	backend := &multiHostStoreStub{detailFound: true, detailResult: store.ScopedEvidenceDetail{View: view, Type: "process", ID: "process:42", Evidence: model.Process{PID: 42, Name: "beta.exe"}}}
+	server := &Server{multiHostStore: backend}
+	body := `{"view":{"case_id":"case","host_id":"beta","version":"2"},"type":"process","id":"process:42"}`
+	for _, tt := range []struct {
+		found  bool
+		err    error
+		status int
+	}{
+		{true, nil, 200}, {false, nil, 404}, {false, store.ErrCaseViewNotFound, 404},
+		{false, store.ErrInvalidEvidenceID, 400}, {false, errors.New("read failed"), 500},
+	} {
+		backend.detailFound, backend.detailErr = tt.found, tt.err
+		recorder := httptest.NewRecorder()
+		server.routes().ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/api/multi-host/evidence/detail", strings.NewReader(body)))
+		if recorder.Code != tt.status || backend.detailView != view {
+			t.Fatalf("status/source = %d/%+v", recorder.Code, backend.detailView)
+		}
+		if tt.status == 200 && !strings.Contains(recorder.Body.String(), `"name": "beta.exe"`) {
+			t.Fatal(recorder.Body.String())
+		}
+	}
+}
+
+func (s *multiHostStoreStub) Views() []store.CaseView { return s.views }
+
+func TestMultiHostViewsEndpoint(t *testing.T) {
+	view := store.CaseView{CaseID: "case", HostID: "host", Version: "version"}
+	server := &Server{multiHostStore: &multiHostStoreStub{views: []store.CaseView{view}}}
+	recorder := httptest.NewRecorder()
+	server.routes().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/multi-host/views", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d", recorder.Code)
+	}
+	var response struct {
+		Views []store.CaseView `json:"views"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if len(response.Views) != 1 || response.Views[0] != view {
+		t.Fatalf("views = %#v", response.Views)
+	}
 }
 
 func (s *multiHostStoreStub) SearchInvestigation(options store.MultiHostSearchOptions) (store.MultiHostSearchResult, error) {

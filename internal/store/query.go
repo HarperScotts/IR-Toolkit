@@ -37,6 +37,27 @@ type LoginQueryOptions struct {
 	Page      QueryPageOptions
 }
 
+type LinuxLoginQueryOptions struct {
+	// Inclusive known-time bounds; zero means unspecified. Unknown times are
+	// retained as context unless explicitly excluded, never placed in the window.
+	Since       time.Time
+	Until       time.Time
+	UnknownTime string // include (default), exclude, only
+	Query       string
+	User        string
+	IP          string
+	Outcome     string
+	Page        QueryPageOptions
+}
+
+type LinuxLogin1QueryOptions struct {
+	Query  string
+	User   string
+	State  string
+	Active *bool
+	Page   QueryPageOptions
+}
+
 type NetworkQueryOptions struct {
 	Query    string
 	PID      uint32
@@ -81,16 +102,19 @@ type FileQueryItem struct {
 }
 
 type PersistenceQueryItem struct {
-	ID        string
-	Type      string
-	Name      string
-	Title     string
-	Command   string
-	User      string
-	Object    string
-	Timestamp time.Time
-	PID       uint32
-	Finding   *model.PersistenceFinding
+	// Populated only for precise detail reads, not list/page queries.
+	LinuxConfig        *model.LinuxPersistenceConfig `json:",omitempty"`
+	LinuxSystemdMerges []model.LinuxSystemdMerge     `json:",omitempty"`
+	ID                 string
+	Type               string
+	Name               string
+	Title              string
+	Command            string
+	User               string
+	Object             string
+	Timestamp          time.Time
+	PID                uint32
+	Finding            *model.PersistenceFinding
 }
 
 type NetworkQueryItem struct {

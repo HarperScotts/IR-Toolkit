@@ -90,35 +90,42 @@ func findHistoricalParent(
 	child model.HistoricalProcess,
 	candidates []model.HistoricalProcess,
 ) *model.HistoricalProcess {
-
+	if child.ID == "" || child.PID == 0 || child.ParentPID == 0 ||
+		child.PID == child.ParentPID || child.Timestamp.IsZero() {
+		return nil
+	}
 	var best *model.HistoricalProcess
+	ambiguous := false
 
 	for i := range candidates {
-
-		candidate :=
-			&candidates[i]
-
-		if candidate.Timestamp.
-			After(
-				child.Timestamp,
-			) {
-
-			break
-		}
-
-		/*
-			同一个 ProcessCreate 不能作为自己的父节点。
-		*/
-
-		if candidate.ID ==
-			child.ID {
-
+		candidate := &candidates[i]
+		if candidate.PID != child.ParentPID {
 			continue
 		}
-
-		best =
-			candidate
+		// An undated same-PID record cannot be ordered against the child.
+		if candidate.Timestamp.IsZero() {
+			return nil
+		}
+		if candidate.Timestamp.After(child.Timestamp) {
+			continue
+		}
+		if best == nil || candidate.Timestamp.After(best.Timestamp) {
+			best, ambiguous = candidate, false
+		} else if candidate.Timestamp.Equal(best.Timestamp) {
+			ambiguous = true
+		}
 	}
-
+	// Do not fall back to an older path match when the latest PID instance
+	// conflicts. No lifecycle evidence exists for an exited historical parent;
+	// only a parent already matched to the current snapshot can be confirmed.
+	if best == nil || ambiguous || best.ID == "" || best.ID == child.ID ||
+		!best.Timestamp.Before(child.Timestamp) || !best.CurrentProcess {
+		return nil
+	}
+	path := normalizeArtifactPath(best.ProcessPath)
+	if path == "" || path != normalizeArtifactPath(child.ParentProcessName) ||
+		path != normalizeArtifactPath(best.CurrentProcessPath) {
+		return nil
+	}
 	return best
 }

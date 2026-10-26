@@ -2135,3 +2135,13 @@ h2 {
 
   user-select: none;
 }
+/* Multi-host results retain their case/host/version provenance. */
+.multi-host-view { display: block; margin: 8px 0; overflow-wrap: anywhere; }
+.multi-host-result { display: block; width: 100%; text-align: left; margin: 6px 0; overflow-wrap: anywhere; }
+#multi-host-detail { overflow-wrap: anywhere; max-height: 640px; overflow: auto; }
+#multi-host-detail pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.multi-host-evidence-fields { display: grid; grid-template-columns: minmax(100px, 25%) minmax(0, 1fr); gap: 8px 16px; }
+.multi-host-evidence-fields dt { color: var(--muted); }
+.multi-host-evidence-fields dd { margin: 0; white-space: pre-wrap; min-width: 0; }
+#multi-host-detail details { margin-top: 16px; }
+@media (max-width: 640px) { .multi-host-evidence-fields { grid-template-columns: 1fr; gap: 4px; } .multi-host-evidence-fields dd { margin-bottom: 8px; } }

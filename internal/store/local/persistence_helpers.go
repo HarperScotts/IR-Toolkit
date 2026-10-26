@@ -1,9 +1,22 @@
 package local
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"ir-toolkit/internal/model"
 	"strings"
 )
+
+func linuxPersistenceItem(artifact model.LinuxPersistenceArtifact) PersistenceItem {
+	// Linux source paths are case-sensitive. Do not use the legacy Windows ID
+	// helper, which folds case and would merge distinct evidence.
+	sum := sha256.Sum256([]byte(artifact.Kind + "\x00" + artifact.Path))
+	return PersistenceItem{
+		ID: fmt.Sprintf("persistence:linux:%x", sum), Type: "linux_" + artifact.Kind,
+		Name: artifact.Path, Title: artifact.Path, Object: artifact.Path,
+		Timestamp: artifact.ModifiedAt,
+	}
+}
 
 func persistenceEvidenceID(
 	evidenceType string,

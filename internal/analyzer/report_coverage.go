@@ -1,11 +1,22 @@
 package analyzer
 
-import "ir-toolkit/internal/model"
+import (
+	"ir-toolkit/internal/model"
+	"strings"
+)
 
 func appendEvidenceGaps(
 	report *model.CaseReport,
 	capabilities model.AuditCapabilitySnapshot,
+	platform string,
 ) {
+	if strings.EqualFold(platform, "linux") {
+		for _, warning := range capabilities.Warnings {
+			report.EvidenceGaps = append(report.EvidenceGaps, "Linux collection capability: "+warning)
+		}
+		report.EvidenceGaps = append(report.EvidenceGaps, "Linux audit/journal historical coverage is not established by Windows-specific capability fields; absent events do not establish absence of activity.")
+		return
+	}
 
 	if !capabilities.SecurityLog.Available {
 

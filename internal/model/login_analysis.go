@@ -113,7 +113,12 @@ type LoginAnalysisStatistics struct {
 }
 
 type LoginAnalysis struct {
-	Sessions []LoginSessionAnalysis `json:"sessions"`
+	LinuxLogin1     *LinuxLogin1Analysis    `json:"linux_login1,omitempty"`
+	LinuxRecords    []LinuxLoginRecord      `json:"linux_records,omitempty"`
+	LinuxSources    []LinuxLoginParseSource `json:"linux_sources,omitempty"`
+	LinuxStatistics *LinuxLoginStatistics   `json:"linux_statistics,omitempty"`
+	Warnings        []string                `json:"warnings,omitempty"`
+	Sessions        []LoginSessionAnalysis  `json:"sessions"`
 
 	FailedLoginGroups []FailedLoginGroup `json:"failed_login_groups,omitempty"`
 

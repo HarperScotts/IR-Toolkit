@@ -17,7 +17,9 @@ type LoginStatistics struct {
 }
 
 type LoginSnapshot struct {
-	Sessions []LoginSession `json:"sessions"`
+	LinuxLogin1    *LinuxLogin1Snapshot `json:"linux_login1,omitempty"`
+	LinuxArtifacts []LinuxLoginArtifact `json:"linux_artifacts,omitempty"`
+	Sessions       []LoginSession       `json:"sessions"`
 
 	Events []LoginEvent `json:"events"`
 

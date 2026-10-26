@@ -3,8 +3,10 @@ package model
 import "time"
 
 type Process struct {
-	PID  uint32 `json:"pid"`
-	PPID uint32 `json:"ppid"`
+	PID uint32 `json:"pid"`
+	// Optional collector-scoped identity; not a replacement for evidence IDs.
+	ProcessInstanceID string `json:"process_instance_id,omitempty"`
+	PPID              uint32 `json:"ppid"`
 
 	Name string `json:"name"`
 

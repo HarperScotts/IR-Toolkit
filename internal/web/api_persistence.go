@@ -53,7 +53,10 @@ type PersistenceListResponse struct {
 }
 
 type PersistenceDetailResponse struct {
-	Item PersistenceListItem `json:"item"`
+	LinuxSystemdMerges []model.LinuxSystemdMerge       `json:"linux_systemd_merges,omitempty"`
+	LinuxConfig        *model.LinuxPersistenceConfig   `json:"linux_config,omitempty"`
+	LinuxArtifact      *model.LinuxPersistenceArtifact `json:"linux_artifact,omitempty"`
+	Item               PersistenceListItem             `json:"item"`
 
 	Service *model.ServiceInfo `json:"service,omitempty"`
 
@@ -382,7 +385,9 @@ func (s *Server) handlePersistenceDetail(
 
 	response :=
 		PersistenceDetailResponse{
-			Item: webItem,
+			Item:               webItem,
+			LinuxConfig:        item.LinuxConfig,
+			LinuxSystemdMerges: item.LinuxSystemdMerges,
 		}
 
 	// ------------------------------------------
@@ -411,6 +416,21 @@ func (s *Server) handlePersistenceDetail(
 	// ------------------------------------------
 
 	switch webItem.Type {
+	case "linux_systemd", "linux_cron":
+		snapshot, err := s.store.PersistenceSnapshot()
+		if err != nil {
+			writeAPIError(writer, http.StatusInternalServerError, "load Linux persistence evidence: "+err.Error())
+			return
+		}
+		if snapshot != nil {
+			for _, artifact := range snapshot.LinuxArtifacts {
+				if artifact.Path == item.Name && "linux_"+artifact.Kind == item.Type {
+					copyArtifact := artifact
+					response.LinuxArtifact = &copyArtifact
+					break
+				}
+			}
+		}
 
 	case "service":
 

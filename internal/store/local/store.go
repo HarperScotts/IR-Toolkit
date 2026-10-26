@@ -81,7 +81,8 @@ type CaseStore struct {
 
 	persistenceSnapshot model.PersistenceSnapshot
 
-	persistenceAnalysis model.PersistenceAnalysis
+	persistenceAnalysis         model.PersistenceAnalysis
+	linuxPersistenceInputDigest string
 
 	persistenceItems []PersistenceItem
 

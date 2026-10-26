@@ -1,6 +1,7 @@
 package web
 
 import (
+	"ir-toolkit/internal/store"
 	"net/http"
 )
 
@@ -8,6 +9,10 @@ func (s *Server) routes() http.Handler {
 
 	mux :=
 		http.NewServeMux()
+	mux.HandleFunc("GET /api/linux-logins", s.handleLinuxLogins)
+	mux.HandleFunc("GET /api/linux-logins/detail", s.handleLinuxLoginDetail)
+	mux.HandleFunc("GET /api/linux-login1", s.handleLinuxLogin1)
+	mux.HandleFunc("GET /api/linux-login1/detail", s.handleLinuxLogin1Detail)
 
 	// -----------------------------
 	// API
@@ -99,6 +104,18 @@ func (s *Server) routes() http.Handler {
 	)
 
 	if s.multiHostStore != nil {
+		if details, ok := s.multiHostStore.(store.ScopedEvidenceStore); ok {
+			mux.HandleFunc("POST /api/multi-host/evidence/detail", s.handleScopedEvidenceDetail(details))
+		}
+		if catalog, ok := s.multiHostStore.(store.CaseViewCatalog); ok {
+			mux.HandleFunc("GET /api/multi-host/views", func(w http.ResponseWriter, r *http.Request) {
+				views := make([]multiHostViewResponse, 0)
+				for _, view := range catalog.Views() {
+					views = append(views, multiHostViewResponseFromStore(view))
+				}
+				writeJSON(w, http.StatusOK, map[string]any{"views": views})
+			})
+		}
 
 		mux.HandleFunc(
 			"POST /api/multi-host/search",

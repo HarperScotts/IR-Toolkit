@@ -1,16 +1,96 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/spf13/cobra"
 
 	"ir-toolkit/internal/model"
 	"ir-toolkit/internal/store"
 	centralstore "ir-toolkit/internal/store/central"
+	webserver "ir-toolkit/internal/web"
 )
+
+// Opt-in local server for manually exercising the embedded UI with synthetic
+// evidence. No collected host data is used or modified.
+func TestCentralBrowserFixture(t *testing.T) {
+	address := os.Getenv("IR_TOOLKIT_BROWSER_TEST_ADDR")
+	if address == "" {
+		t.Skip("set IR_TOOLKIT_BROWSER_TEST_ADDR to serve the browser fixture")
+	}
+	cases := writeCentralBrowserCases(t)
+	first := cases[0]
+	repository, investigator, loaded, err := buildCentralInvestigation("fixture-investigation", cases)
+	if err != nil {
+		t.Fatal(err)
+	}
+	primary, _ := repository.Open(loaded[0].View)
+	server, err := webserver.NewServer(webserver.Options{CaseDir: first, Store: primary, MultiHostStore: investigator, ListenAddr: address})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	t.Logf("Synthetic browser fixture: http://%s", address)
+	if err := server.Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Prepare an opt-in archive, then exit normally so t.TempDir removes all source
+// cases. Run the real central-web command against this archive across restarts.
+// Use only a newly created empty destination dedicated to this fixture.
+func TestPrepareArchivedBrowserFixture(t *testing.T) {
+	root := os.Getenv("IR_TOOLKIT_ARCHIVE_BROWSER_ROOT")
+	if root == "" {
+		t.Skip("set IR_TOOLKIT_ARCHIVE_BROWSER_ROOT to prepare a synthetic archive")
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatal("browser fixture archive destination must be empty")
+	}
+	oldRepository, oldCaseID := importRepository, importCaseID
+	t.Cleanup(func() { importRepository, importCaseID = oldRepository, oldCaseID })
+	importRepository, importCaseID = root, "fixture-investigation"
+	cases := writeCentralBrowserCases(t)
+	if err := centralImportCmd.RunE(&cobra.Command{}, cases); err != nil {
+		t.Fatal(err)
+	}
+	for _, source := range cases {
+		t.Logf("Temporary source (removed at test exit): %s", source)
+	}
+	t.Logf("Prepared synthetic archive: %s", root)
+}
+
+func writeCentralBrowserCases(t *testing.T) []string {
+	t.Helper()
+	first := writeCentralCaseFixture(t, "fixture-alpha", "collection-1")
+	second := writeCentralCaseFixture(t, "fixture-beta", "collection-2")
+	for _, dir := range []string{first, second} {
+		writeCentralJSON(t, dir, "process/processes.json", []model.Process{{PID: 42, Name: "needle.exe"}})
+		events := make([]model.TimelineEvent, 52)
+		for index := range events {
+			events[index] = model.TimelineEvent{
+				ID:        fmt.Sprintf("event:%d", index),
+				Timestamp: time.Date(2026, 1, 1, 0, index, 0, 0, time.UTC),
+				Category:  "process", Description: "needle process event", PID: 42,
+			}
+		}
+		events[0].Timestamp = time.Time{}
+		writeCentralJSON(t, dir, "timeline/timeline.json", model.Timeline{Events: events})
+	}
+	return []string{first, second}
+}
 
 func TestBuildCentralInvestigationLoadsMultipleFrozenViews(t *testing.T) {
 	case1 := writeCentralCaseFixture(t, "host-1", "collection-1")

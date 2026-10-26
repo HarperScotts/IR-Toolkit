@@ -28,6 +28,29 @@ func AnalyzePersistence(
 				persistence.Services,
 			),
 		)
+	// Linux candidates are an inventory only. Windows command heuristics and
+	// case-insensitive path/PID correlation must not interpret these artifacts.
+	result.Statistics.LinuxArtifactCount = uint32(len(persistence.LinuxArtifacts))
+	for _, artifact := range persistence.LinuxArtifacts {
+		if artifact.ReadError != "" {
+			result.Statistics.LinuxReadErrorCount++
+		}
+	}
+	result.LinuxConfigs, result.Warnings = analyzeLinuxPersistenceConfigs(ctx, persistence.LinuxArtifacts)
+	merges, mergeWarnings := mergeObservedSystemd(ctx, persistence, result.LinuxConfigs)
+	result.LinuxSystemdMerges = merges
+	result.Statistics.LinuxSystemdMergeCount = uint32(len(merges))
+	for _, merge := range merges {
+		if merge.Status == "blocked" {
+			result.Statistics.LinuxSystemdBlockedCount++
+		}
+	}
+	result.Warnings = append(result.Warnings, mergeWarnings...)
+	result.Statistics.LinuxConfigCount = uint32(len(result.LinuxConfigs))
+	for _, config := range result.LinuxConfigs {
+		result.Statistics.LinuxDirectiveCount += uint32(len(config.Directives))
+		result.Statistics.LinuxCronEntryCount += uint32(len(config.CronEntries))
+	}
 
 	result.Statistics.RunKeyCount =
 		uint32(

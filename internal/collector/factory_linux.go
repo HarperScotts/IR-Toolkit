@@ -13,9 +13,7 @@ func NewProcessCollector() (Collector, error) {
 }
 
 func NewNetworkCollector() (Collector, error) {
-	return newUnsupportedCollector(
-		"linux_network",
-	), nil
+	return &linux.NetworkCollector{}, nil
 }
 
 func NewPersistenceCollector() (Collector, error) {

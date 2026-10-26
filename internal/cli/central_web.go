@@ -20,15 +20,24 @@ import (
 )
 
 var (
-	centralWebCaseID string
-	centralWebListen string
+	centralWebCaseID     string
+	centralWebListen     string
+	centralWebRepository string
 )
 
 var centralWebCmd = &cobra.Command{
-	Use:   "central-web --case-id <investigation-id> <case-dir> [case-dir...]",
+	Use:   "central-web --case-id <investigation-id> [--repository <dir> | <case-dir>...]",
 	Short: "Start a read-only multi-host investigation web UI",
-	Args:  cobra.MinimumNArgs(1),
-	RunE:  runCentralWeb,
+	Args: func(cmd *cobra.Command, args []string) error {
+		if centralWebRepository != "" {
+			if len(args) != 0 {
+				return fmt.Errorf("--repository cannot be combined with case directories; use central-import first")
+			}
+			return nil
+		}
+		return cobra.MinimumNArgs(1)(cmd, args)
+	},
+	RunE: runCentralWeb,
 }
 
 func init() {
@@ -39,6 +48,9 @@ func init() {
 		"stable investigation ID shared by all host views",
 	)
 	_ = centralWebCmd.MarkFlagRequired("case-id")
+	centralWebCmd.Flags().StringVar(
+		&centralWebRepository, "repository", "", "read committed snapshots from a local Central archive",
+	)
 	centralWebCmd.Flags().StringVar(
 		&centralWebListen,
 		"listen",
@@ -60,7 +72,15 @@ func runCentralWeb(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("case-id is required")
 	}
 
-	repository, investigator, loaded, err := buildCentralInvestigation(caseID, args)
+	var repository *centralstore.Repository
+	var investigator *centralstore.Investigator
+	var loaded []loadedCentralView
+	var err error
+	if centralWebRepository != "" {
+		repository, investigator, loaded, err = openArchivedInvestigation(centralWebRepository, caseID)
+	} else {
+		repository, investigator, loaded, err = buildCentralInvestigation(caseID, args)
+	}
 	if err != nil {
 		return err
 	}

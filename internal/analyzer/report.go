@@ -20,6 +20,7 @@ func BuildCaseReport(
 	correlation model.HistoricalCorrelationAnalysis,
 	timeline model.Timeline,
 	ioc *model.IOCScanResult,
+	collectionWarnings ...string,
 ) model.CaseReport {
 
 	report :=
@@ -29,7 +30,9 @@ func BuildCaseReport(
 			CasePath: casePath,
 
 			Host: model.ReportHostSummary{
-				Hostname: host.Hostname,
+				Hostname:     host.Hostname,
+				OS:           host.OS,
+				Architecture: host.Architecture,
 			},
 
 			Collection: model.ReportCollectionSummary{
@@ -113,6 +116,7 @@ func BuildCaseReport(
 	appendEvidenceGaps(
 		&report,
 		capabilities,
+		host.OS,
 	)
 
 	sort.SliceStable(
@@ -141,6 +145,7 @@ func BuildCaseReport(
 			report.TopFindings[:25]
 	}
 
+	report.EvidenceGaps = append(report.EvidenceGaps, collectionWarnings...)
 	buildExecutiveSummary(
 		&report,
 	)

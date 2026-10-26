@@ -16,19 +16,15 @@ var (
 // Evidence IDs remain scoped to this view and are not rewritten.
 type View = store.CaseView
 
-type snapshotStore interface {
-	store.CaseStore
-}
-
 // CaseStore binds a committed Store snapshot to its Central identity.
 //
-// The embedded contract is intentionally read-only. Central ingest is
-// responsible for producing and atomically publishing the snapshot; it is not
-// part of this type.
+// Results are caller-owned copies. The source must already be a committed,
+// immutable snapshot, safe for concurrent reads; New does not freeze a live
+// Store. Its owner must not mutate it or its previously returned values after
+// publication. Preparing that snapshot is separate from atomic publication.
 type CaseStore struct {
-	snapshotStore
-
-	view View
+	snapshot store.CaseStore
+	view     View
 }
 
 func New(view View, snapshot store.CaseStore) (*CaseStore, error) {
@@ -40,8 +36,8 @@ func New(view View, snapshot store.CaseStore) (*CaseStore, error) {
 	}
 
 	return &CaseStore{
-		snapshotStore: snapshot,
-		view:          view,
+		snapshot: snapshot,
+		view:     view,
 	}, nil
 }
 

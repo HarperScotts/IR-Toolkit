@@ -5,6 +5,7 @@ import (
 	"runtime"
 
 	"github.com/spf13/cobra"
+	"ir-toolkit/internal/buildinfo"
 )
 
 var infoCmd = &cobra.Command{
@@ -30,6 +31,11 @@ var infoCmd = &cobra.Command{
 
 		fmt.Println(
 			"========================================",
+		)
+
+		fmt.Printf(
+			"Version      : %s\n",
+			buildinfo.Version,
 		)
 
 		fmt.Printf(

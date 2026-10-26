@@ -82,9 +82,17 @@ func buildCurrentProcessMap(
 		)
 
 	for _, process := range processes {
+		if process.PID == 0 {
+			continue
+		}
 
-		result[process.PID] =
-			process
+		if _, exists := result[process.PID]; exists {
+			// Keep a zero sentinel so a third occurrence cannot restore a match.
+			// Duplicate PIDs in a current snapshot are ambiguous, even if equal.
+			result[process.PID] = model.Process{}
+			continue
+		}
+		result[process.PID] = process
 	}
 
 	return result
@@ -144,19 +152,15 @@ func buildHistoricalProcess(
 	if current, exists :=
 		currentProcessMap[event.NewProcessID]; exists {
 
-		/*
-			PID 会复用，所以不能仅凭 PID 就认为一定
-			是同一个进程。
-
-			这里增加路径校验。
-		*/
-
-		if normalizeArtifactPath(
-			current.Path,
-		) ==
-			normalizeArtifactPath(
-				event.NewProcessName,
-			) {
+		// PID and executable path can both recur after a process exits.
+		// With today's schema, only exact known time agreement is accepted;
+		// audit timestamps may differ from creation time, so do not use a
+		// guessed tolerance or fall back to a path-only match.
+		path := normalizeArtifactPath(event.NewProcessName)
+		if event.NewProcessID != 0 && current.PID == event.NewProcessID &&
+			!current.StartTime.IsZero() && !event.Timestamp.IsZero() &&
+			current.StartTime.Equal(event.Timestamp) && path != "" &&
+			normalizeArtifactPath(current.Path) == path {
 
 			process.CurrentProcess =
 				true

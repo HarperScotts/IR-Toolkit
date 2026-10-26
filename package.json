@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "test": "node --test internal/web/frontend_tests/*.test.cjs",
+    "check": "sh scripts/check.sh"
+  },
   "dependencies": {
     "cytoscape": "^3.34.2"
   }

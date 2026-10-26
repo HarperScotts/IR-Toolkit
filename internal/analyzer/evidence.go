@@ -42,11 +42,17 @@ func LoadProcesses(
 func LoadNetworkConnections(
 	path string,
 ) ([]model.NetworkConnection, error) {
+	snapshot, err := LoadNetworkSnapshot(path)
+	return snapshot.Connections, err
+}
+
+// LoadNetworkSnapshot retains collection scope/coverage warnings for reports.
+func LoadNetworkSnapshot(path string) (model.NetworkSnapshot, error) {
 
 	data, err := os.ReadFile(path)
 
 	if err != nil {
-		return nil, fmt.Errorf(
+		return model.NetworkSnapshot{}, fmt.Errorf(
 			"read network evidence %q: %w",
 			path,
 			err,
@@ -60,14 +66,14 @@ func LoadNetworkConnections(
 		&snapshot,
 	); err != nil {
 
-		return nil, fmt.Errorf(
+		return model.NetworkSnapshot{}, fmt.Errorf(
 			"parse network evidence %q: %w",
 			path,
 			err,
 		)
 	}
 
-	return snapshot.Connections, nil
+	return snapshot, nil
 }
 
 func LoadPersistence(

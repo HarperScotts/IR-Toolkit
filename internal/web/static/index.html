@@ -132,6 +132,41 @@
         </section>
 
         <!-- Global Search -->
+        <section id="multi-host-panel" class="hidden">
+          <h2>Multi-host Investigation</h2>
+          <p class="section-subtitle">Select committed host versions to search or inspect their timeline.</p>
+          <div id="multi-host-views"></div>
+          <div class="search-row">
+            <label>Query <input id="multi-host-query" type="search" /></label>
+            <label>Search type <select id="multi-host-type"><option value="">All evidence</option><option value="process">Process</option><option value="login">Login</option><option value="network">Network</option><option value="file">File</option><option value="persistence">Persistence</option><option value="historical_process">Historical process</option><option value="powershell">PowerShell</option><option value="windows_event">Windows event</option><option value="ioc">IOC</option><option value="timeline">Timeline</option></select></label>
+            <button id="multi-host-search" type="button">Search</button>
+            <button id="multi-host-timeline" type="button">Timeline</button>
+            <button id="multi-host-reset" type="button" class="secondary-button">Reset filters</button>
+            <button id="multi-host-copy-link" type="button" class="secondary-button" disabled>Copy investigation link</button>
+          </div>
+          <label>Investigation link <input id="multi-host-link" type="text" readonly /></label>
+          <fieldset>
+            <legend>Timeline filters</legend>
+            <div class="search-row">
+              <label>Category <input id="multi-host-category" type="text" placeholder="Timeline category" /></label>
+              <label>User <input id="multi-host-user" type="text" /></label>
+              <label>PID <input id="multi-host-pid" type="number" min="0" max="4294967295" step="1" /></label>
+              <label>IP <input id="multi-host-ip" type="text" /></label>
+              <label>From (local time) <input id="multi-host-from" type="datetime-local" step="any" /></label>
+              <label>To (local time) <input id="multi-host-to" type="datetime-local" step="any" /></label>
+              <label>Order <select id="multi-host-order"><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></label>
+            </div>
+          </fieldset>
+          <p id="multi-host-status" role="status"></p>
+          <div id="multi-host-counts" class="category-tabs" aria-label="Evidence counts"></div>
+          <div id="multi-host-summary" aria-label="Results by host"></div>
+          <div id="multi-host-results"></div>
+          <div class="pagination">
+            <button id="multi-host-prev" type="button" disabled>Previous</button>
+            <button id="multi-host-next" type="button" disabled>Next</button>
+          </div>
+          <div id="multi-host-detail" class="event-detail" aria-label="Source evidence detail" aria-live="polite"></div>
+        </section>
         <section class="global-search-section">
           <div class="section-heading">
             <div>
@@ -264,6 +299,14 @@
               <span> Explore historical evidence relationships </span>
             </button>
 
+            <button type="button" class="investigation-card" id="open-linux-logins">
+              <strong>Linux SSH authentication</strong>
+              <span>Investigate reported outcomes, not reconstructed sessions</span>
+            </button>
+            <button type="button" class="investigation-card" id="open-linux-login1">
+              <strong>Linux login1 observations</strong>
+              <span>Inspect saved service claims, not confirmed activity</span>
+            </button>
             <button type="button" class="investigation-card" data-view="logins">
               <strong> Logins </strong>
 
@@ -430,6 +473,52 @@
           </div>
         </section>
 
+        <section id="linux-login-section" class="hidden">
+          <h2>Linux SSH authentication evidence</h2>
+          <p>Reported Accepted/Failed only — not sessions, unique attempts, execution or confirmed process identities. Unknown times are context, not confirmed within a window. Query filters do not trim stored evidence.</p>
+          <form id="linux-login-form" class="login-toolbar">
+            <label>Search <input name="q" type="text"></label>
+            <label>User (case-sensitive) <input name="user" type="text"></label>
+            <label>Literal IP <input name="ip" type="text"></label>
+            <label>Outcome <select name="outcome"><option value="">All</option><option value="accepted">Accepted</option><option value="failed">Failed</option></select></label>
+            <label>Since (RFC3339 with offset) <input name="since" placeholder="2026-10-17T00:00:00Z"></label>
+            <label>Until (inclusive) <input name="until" placeholder="2026-10-17T23:59:59Z"></label>
+            <label>Unknown time <select name="unknown_time"><option value="include">Include as context</option><option value="exclude">Exclude</option><option value="only">Only unknown</option></select></label>
+            <button type="submit">Apply</button><button type="reset">Reset</button>
+          </form>
+          <p id="linux-login-status" role="status"></p>
+          <details><summary>Saved-analysis source coverage and warnings (not filtered)</summary><pre id="linux-login-coverage"></pre></details>
+          <div class="login-workspace">
+            <div><div id="linux-login-list" class="login-list"></div>
+              <button id="linux-login-prev" type="button">Previous</button>
+              <button id="linux-login-next" type="button">Next</button>
+            </div>
+            <aside id="linux-login-detail" class="event-detail">Select a reported authentication record.</aside>
+          </div>
+          <button id="close-linux-logins" type="button">Close</button>
+        </section>
+        <section id="linux-login1-section" class="hidden">
+          <h2>Saved Linux login1 observations</h2>
+          <p>Service reports only, not confirmed activity, SSH outcomes, complete sessions or process identities.
+            Active is a reported foreground hint. Unknown is not false. Collection time is not creation/activity time.</p>
+          <form id="linux-login1-form" class="login-toolbar">
+            <label>Search <input name="q"></label>
+            <label>User (case-sensitive) <input name="user"></label>
+            <label>Reported State (exact) <input name="state"></label>
+            <label>Reported Active <select name="active"><option value="">All, including unknown</option><option value="true">true</option><option value="false">false</option></select></label>
+            <button type="submit">Apply</button><button type="reset">Reset</button>
+          </form>
+          <p id="linux-login1-status" role="status"></p>
+          <details><summary>Saved-analysis coverage and warnings (not filtered)</summary><pre id="linux-login1-coverage"></pre></details>
+          <div class="login-workspace">
+            <div><div id="linux-login1-list" class="login-list"></div>
+              <button id="linux-login1-prev" type="button">Previous</button>
+              <button id="linux-login1-next" type="button">Next</button>
+            </div>
+            <aside id="linux-login1-detail" class="event-detail">Select a saved observation.</aside>
+          </div>
+          <button id="close-linux-login1" type="button">Close</button>
+        </section>
         <!-- Login Workspace -->
         <section id="login-section" class="hidden">
           <div class="section-heading">
@@ -1093,5 +1182,8 @@
 
     <script src="/vendor/cytoscape.min.js"></script>
     <script src="/app.js"></script>
+    <script src="/multi-host.js"></script>
+    <script src="/linux-logins.js"></script>
+    <script src="/linux-login1.js"></script>
   </body>
 </html>

@@ -1139,6 +1139,39 @@ function renderPersistenceDetail(data) {
 
   container.appendChild(title);
 
+  if (data.linux_artifact) {
+    const raw = document.createElement("details");
+    const label = document.createElement("summary");
+    label.textContent = "Linux source evidence (content is Base64; activation unknown)";
+    const content = document.createElement("pre");
+    content.textContent = JSON.stringify(data.linux_artifact, null, 2);
+    raw.appendChild(label);
+    raw.appendChild(content);
+    container.appendChild(raw);
+  }
+
+  if (data.linux_config) {
+    const parsed = document.createElement("details");
+    const label = document.createElement("summary");
+    label.textContent = "File-local Linux syntax (activation/execution unknown)";
+    const content = document.createElement("pre");
+    content.textContent = JSON.stringify(data.linux_config, null, 2);
+    parsed.appendChild(label);
+    parsed.appendChild(content);
+    container.appendChild(parsed);
+  }
+
+  if (Array.isArray(data.linux_systemd_merges) && data.linux_systemd_merges.length) {
+    const merged = document.createElement("details");
+    const label = document.createElement("summary");
+    label.textContent = "Observed systemd subset (not actual effective/runtime configuration)";
+    const content = document.createElement("pre");
+    content.textContent = JSON.stringify(data.linux_systemd_merges, null, 2);
+    merged.appendChild(label);
+    merged.appendChild(content);
+    container.appendChild(merged);
+  }
+
   appendEvidenceDetailField(container, "Type", item.type || "");
 
   appendEvidenceDetailField(container, "Name", item.name || "");

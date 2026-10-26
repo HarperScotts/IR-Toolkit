@@ -12,12 +12,14 @@ func isListener(
 ) bool {
 
 	// UDP 没有 TCP LISTEN 状态。
-	// 当前阶段把 UDP bound endpoint 统一归入 Listeners。
+	// A bound endpoint without a peer is a listener. Linux also exposes
+	// connected UDP peers; those must not be mistaken for bound-only sockets.
 	if strings.EqualFold(
 		connection.Protocol,
 		"UDP",
 	) {
-		return true
+		ip := net.ParseIP(connection.RemoteAddress)
+		return connection.RemotePort == 0 && (connection.RemoteAddress == "" || ip != nil && ip.IsUnspecified())
 	}
 
 	return strings.EqualFold(

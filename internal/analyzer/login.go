@@ -35,6 +35,11 @@ func AnalyzeLogin(
 	// First pass:
 	// 4624 -> Login Session
 	// --------------------------------------------------
+	result.LinuxRecords, result.LinuxSources, result.LinuxStatistics, result.Warnings = analyzeLinuxLogin(ctx, snapshot.LinuxArtifacts)
+	result.LinuxLogin1 = analyzeLogin1(ctx, snapshot.LinuxLogin1)
+	if result.LinuxLogin1 != nil {
+		result.Warnings = append(result.Warnings, result.LinuxLogin1.Warnings...)
+	}
 
 	sessionMap := make(
 		map[string]*model.LoginSessionAnalysis,

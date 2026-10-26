@@ -177,3 +177,27 @@ func TestNormalizeInvestigationLimit(t *testing.T) {
 		}
 	}
 }
+
+func TestInvestigatorViewsAreSortedAndDetached(t *testing.T) {
+	repository, err := NewRepository()
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := View{CaseID: "case", HostID: "a", Version: "1"}
+	second := View{CaseID: "case", HostID: "b", Version: "1"}
+	if _, err := repository.IngestBatch(IngestRequest{View: second, Snapshot: &snapshotStub{}}, IngestRequest{View: first, Snapshot: &snapshotStub{}}); err != nil {
+		t.Fatal(err)
+	}
+	investigator, err := NewInvestigator(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	views := investigator.Views()
+	if len(views) != 2 || views[0] != first || views[1] != second {
+		t.Fatalf("views = %#v", views)
+	}
+	views[0].HostID = "changed"
+	if investigator.Views()[0] != first {
+		t.Fatal("catalog changed through returned slice")
+	}
+}
