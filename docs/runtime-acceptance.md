@@ -1,5 +1,27 @@
 # 运行验收记录
 
+## 2026-11-01：Go CI 与四平台发布草稿流水线
+
+原 Deno 工作流由 Go 检查替代，复用统一脚本、前端21项和四平台交叉编译，并增加证据链路 race。
+新增严格标签的构建脚本及发布草稿工作流：构建默认只读，独立上传 job 才有 contents:write；
+不处理 PR 的发布、不自动公开、不覆盖既有 Release/附件，不修改 `V0.3.0`。
+官方 Actions 均经远端标签解析后固定完整提交 SHA，checkout 不保留 Git 凭据。
+
+本地验证：
+
+- 完整统一检查通过，包含新发布脚本 vet/test、YAML 解析、安全契约回归及既有 Go/前端/编译检查。
+- 新构建/清单/归档与工作流回归通过 race；覆盖干净标签、版本匹配、源码目录/已存在输出拒绝、
+  脏/忽略文件拒绝、缺失/额外/损坏/重复资产、摘要、路径、执行权限和不覆盖。
+- 将当前源码复制到全新的临时 Git fixture、提交并在 fixture 内创建测试标签，真实构建 Windows/
+  Linux amd64/arm64，验证固定7份输出、Linux tar 执行权限、来源元数据与 SHA-256。
+  该测试提交/标签仅属于临时验证仓库，不是正式发布来源；产物未上传到任何既有 Release。
+- BUILDINFO 和说明明确 real_host_acceptance=not_attested。本地构建不代替 GitHub 执行，
+  工作流配置不代替草稿创建或公开发布；云端状态须查看对应 Actions run。
+
+步骤与失败/重试边界见 [发布自动化](release-automation.md)。未来版本需先提交版本/CHANGELOG，
+为该提交创建匹配标签，草稿附件齐全后仍需维护者人工确认发布。真实 logind/Windows 现场验收
+没有因本批自动化工作而完成。
+
 ## 2026-10-18：login1 只读兼容性诊断与实机验收捕获流程
 
 新增 `ir diagnose-login1` JSON 命令和 `scripts/linux-login1-acceptance.sh`，

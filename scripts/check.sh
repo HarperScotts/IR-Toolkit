@@ -58,6 +58,8 @@ go vet scripts/package-acceptance.go scripts/package-acceptance_test.go
 go test scripts/package-acceptance.go scripts/package-acceptance_test.go
 go vet scripts/utmp-abi-check.go scripts/utmp-abi-check_test.go
 go test scripts/utmp-abi-check.go scripts/utmp-abi-check_test.go
+go vet scripts/build-release.go scripts/build-release_test.go scripts/workflow_test.go
+go test scripts/build-release.go scripts/build-release_test.go scripts/workflow_test.go
 
 printf 'Checking frontend scripts and interactions...\n'
 sh -n scripts/linux-login1-acceptance.sh

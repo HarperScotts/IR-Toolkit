@@ -1,6 +1,7 @@
 # IR Toolkit
 
 当前开发版本：`0.3.0`。更新内容与未完成验收见 [CHANGELOG](CHANGELOG.md)。
+开发检查与新版本发布草稿流程见 [CI/发布自动化](docs/release-automation.md)；草稿需人工确认后公开，不覆盖既有 Release。
 
 IR Toolkit 是一个面向攻防与事件响应（Incident Response）的本地命令行/ Web 工具集，目标是帮助调查人员在主机上收集证据、分析恶意行为、识别 IOC，并在本地浏览调查结果。
 
