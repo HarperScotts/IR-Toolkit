@@ -1,8 +1,9 @@
 # 分析完成与发布边界设计
 
-状态：2026-10-16，整体发布流程仍为设计草案；完成声明 v1 的独立 codec 已实现，
-见第 8 节，尚未接入任何读写入口。当前 analyze 仍逐文件覆盖原目录，
-不能宣称已具有整批发布或中断保护。本文件不是可用 CLI 文档。
+状态：2026-11-01，整体发布流程仍未实现；完成声明 v1 codec 和独立只读磁盘清单验证已实现，
+后者提供 `analysis-verify` 检查入口，见第 9 节。它尚未接入 Store/Web/package reader 门禁或
+生产 writer。当前 analyze 仍逐文件覆盖原目录，不能宣称已有整批发布或中断保护。
+除第 9 节只读命令外，本文仍是设计，不是其它已实现 CLI 的文档。
 
 ## 1. 选择与范围
 
@@ -216,4 +217,42 @@ ValidatePair 比较合法 run/commit 的 run_id，仍需未来磁盘层核对运
 全部 inventory 的真实文件。codec 不证明 manifest/host 字节与声明身份相符，
 也不验证领域内容、运行来源或完成发布状态。
 
-下一阶段应先实现只读文件清单验证与 reader 门禁；其后再接 builder 和发布。
+只读文件清单验证现已实现，见第 9 节；下一阶段应接统一 reader 门禁，其后再接 builder 和发布。
+
+## 9. 2026-11-01 只读磁盘 inventory 验证（独立入口）
+
+```sh
+ir analysis-verify /absolute/path/to/case
+```
+
+此命令在当前开发源码中可用，不向已发布的 `V0.3.0` 二进制回填。它不写入、修复、生成标记或
+发布结果，也不查询总线、不重新分析、不打开 Web。stdout 为 JSON receipt，错误诊断在 stderr，
+拒绝时返回非零；当前根 CLI 也可能打印错误栈。
+
+- 两个规范标记均不存在：`legacy_unmanaged`，只表示识别为旧目录，不验证其领域内容或文件清单。
+- 两个标记都存在且验证成功：`inventory_verified`，返回 run_id、content_digest、实际文件数及
+  payload 字节数。所有 receipt 都有 `domains_loaded=false`、`publication_attested=false`。
+- 单独标记、非规范大小写、目录/链接标记、JSON/版本/配对/清单/限额等错误：`rejected`，不回退
+  legacy，不返回部分验证结果；错误 receipt 不提供成功的 managed/count 声明。
+
+`VerifyDirectory` 使用既有严格 codec，扫描实际目录并逐字节哈希，检查精确文件集合、大小和
+SHA-256（包含运行描述，完成声明自身另计），拒绝额外文件/空目录、路径别名、遍历、特殊文件、
+符号链接及硬链接。v1 的必需输入仍包含 Windows 事件文件；本批未扩展 Linux 发布 profile。
+即使所有域文件都是无效空 JSON，只要声明与字节匹配仍可能 inventory_verified，不能据此开放
+调查视图。manifest/host 身份、IOC 可解码性、14份输出的领域正确性均尚未验证。
+
+文件数/单文件/payload 限额沿用 codec：4096（含两份标记）、64MiB、256MiB；元数据各最多1MiB，
+只允许收紧。实际文件大小和读取探测都受限，不依赖声明大小分配大内存。哈希用64KiB分块，
+目录枚举分批并限制深度/条目数；根目录标记识别也受文件数预算约束。payload 数值按最终唯一
+文件计数，初始解析与结束重读元数据另有最多4MiB额外I/O，不是硬内存/RSS或整体耗时保证。
+
+要求来源已停止写入，父目录可信且私有。目录句柄固定、文件打开前后和末次 metadata/link 复核、
+标记末次字节哈希复核用于拒绝**观察到**的替换/变化/增删。Unix 打开叶文件用 NOFOLLOW/NONBLOCK，
+Windows 复核句柄的链接数/reparse属性；Windows 原生行为仍需实机验收。
+这些检查不是原子快照，也不能抵抗敌对写入者在检查窗口之间修改并恢复数据。
+context 在枚举/分块读取之间检查，普通文件同步 I/O 不承诺随取消立即中断。
+
+本批**没有**统一 reader 门禁、完整域冻结加载、源复制 builder、Close/Sync 故障发布协议、
+独占完成标记发布、writer 不可变保护或离线包/归档 gate。现有 Store/Web/导入/打包路径不会因
+存在该独立命令就自动获得新协议保护；`analyze` 行为不变。不得手动创建标记后把旧 reader 当成
+安全的新协议消费者。下一批需要统一失败关闭的 reader 门禁，并保持旧 case 兼容。

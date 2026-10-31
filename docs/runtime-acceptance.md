@@ -1,5 +1,27 @@
 # 运行验收记录
 
+## 2026-11-01：分析完成声明的只读磁盘清单验证
+
+新增 `analysiscommit.VerifyDirectory` 与 `ir analysis-verify <case-dir>`，属于完成发布协议的
+独立字节验证阶段，不是新 writer、统一 reader gate 或原子发布。实现与边界见
+[第9节](analysis-publication-contract.md#9-2026-11-01-只读磁盘-inventory-验证独立入口)。
+
+- 真实磁盘 fixture 验证 run/commit 配对、全清单大小/hash（包括可选 IOC）、元数据读取边界、
+  额外/缺失/改变文件、空额外目录、大小写/尾部点号别名、单独/损坏标记、目录/链接标记、
+  硬链接、逐文件/总字节/文件数限额、取消、底层错误身份及零部分结果回归。
+- golden fixture 的空领域 JSON 仍可通过字节验证，专门证明 inventory_verified 不意味着完整
+  领域加载。legacy 只在两个标记均不存在时识别，不声称清单完整。CLI 不写 case 文件，
+  JSON stdout 与 stderr 分开；domains_loaded/publication_attested 始终 false。
+- 本地 macOS 普通用户的文件、符号链接/硬链接、FIFO拒绝及权限拒读通过；相关增量10次与
+  analysiscommit/CLI race通过。完整检查通过，含 Windows/Linux amd64/arm64交叉编译，
+  Windows测试程序也可交叉编译，但没有 Windows 原生运行验收。
+- Docker 原生 Linux 尝试因本机 daemon socket 不存在而未执行，没有自动启动 Docker。
+  新 Unix 原生测试同时覆盖 macOS/Linux，GitHub CI 的 race 范围已加入 analysiscommit；
+  云端实际执行结果需查对应 Actions run，不能把本地交叉编译冒充 Linux 原生回归。
+
+本批无生成/修复标记、源复制 builder、独占发布或 writer 不可变保护；没有接入 Store/Web/
+Central/package reader，旧 analyze 的逐文件写入行为不变；没有修改已发布 V0.3.0 的附件。
+
 ## 2026-11-01：Go CI 与四平台发布草稿流水线
 
 原 Deno 工作流由 Go 检查替代，复用统一脚本、前端21项和四平台交叉编译，并增加证据链路 race。

@@ -38,4 +38,4 @@ jobs:
       - name: Unified checks (including frontend and cross-compilation)
         run: sh scripts/check.sh
       - name: Evidence pipeline race checks
-        run: go test -race ./internal/analyzer ./internal/collector/linux ./internal/store/... ./internal/cli ./internal/web
+        run: go test -race ./internal/analysiscommit ./internal/analyzer ./internal/collector/linux ./internal/store/... ./internal/cli ./internal/web

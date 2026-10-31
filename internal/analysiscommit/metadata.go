@@ -1,6 +1,7 @@
-// Package analysiscommit validates bounded analysis completion declarations.
-// It does not read case files, load domains, publish results or authenticate a
-// source. It is not yet wired into CLI, Store or package readers.
+// Package analysiscommit validates bounded analysis completion declarations
+// and provides a separate read-only disk inventory verifier. Neither operation
+// loads domains, publishes results or authenticates a source. Store/package
+// reader gates and the production writer are not yet integrated.
 package analysiscommit
 
 import (
